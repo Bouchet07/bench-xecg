@@ -15,5 +15,5 @@ plot_predictions: false
 max_length_signal: 2000
 
 #CPU
-num_workers: 0
-precision: 32
+#num_workers: 0
+#precision: 32
