@@ -32,3 +32,5 @@ models
 *.egg_info
 __pycache__
 uv.lock
+
+runs/
