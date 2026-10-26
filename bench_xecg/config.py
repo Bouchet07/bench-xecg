@@ -81,6 +81,11 @@ def parse_config(config_file, default_config_file):
         merged_config.discriminative_lr_factor = 0.1
         merged_config.patch_size = 2
 
+    elif merged_config.use_my_model:
+        merged_config.sampling_freq = 100
+        merged_config.patch_size = 50
+        merged_config.layerwise_lr_decay = 1.0
+
     if merged_config.linear_probing:
         merged_config.layerwise_lr_decay = 1.
         merged_config.drop_path_prob = 0.

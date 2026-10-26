@@ -71,6 +71,13 @@ def get_base_model(config, feature_classification=False, sleep_apnea=False, mode
     elif config.use_ecg_cpc:
         base_model = CPCWrapper(config, model_base_path+ './pretrained_models/ecg_cpc/init_dict.yaml', feature_classification=feature_classification, sleep_apnea=sleep_apnea)
         base_model.load_weights_from_checkpoint('./pretrained_models/ecg_cpc/last_11597276_state_dict.ckpt')
+    elif config.use_my_model:
+        from bench_xecg.models.my_model import MyTestModel
+        base_model = MyTestModel(
+            config,
+            feature_classification=feature_classification,
+            sleep_apnea=sleep_apnea,
+        )
     else:
         if sleep_apnea:
             base_model = xLSTMSleepApnea(config=config, num_classes=config.num_classes, num_channels=len(config.leads))
