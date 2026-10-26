@@ -28,7 +28,7 @@ bench_xecg.egg-info
 cauchy_mult.egg-info
 logs_lightning
 .vscode
-models
+/models/
 *.egg_info
 __pycache__
 uv.lock
