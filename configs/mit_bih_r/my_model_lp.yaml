@@ -1,0 +1,24 @@
+# training loop hyp
+    wandb_log: false
+    wandb_group: my_model_lp
+    epochs: 1
+
+    use_my_model: true
+    linear_probing: true
+    deterministic: false
+    compile_model: false
+
+    lr_head: 0.001
+    wd: 0.1
+    batch_size: 96
+    num_workers: 16
+
+    skip_majority_class_samples: true
+    use_class_weights: false
+    split_val_by_patient: true
+    win_len: 1250
+
+    r_peaks_detection: true
+
+    # MUST end with a trailing slash '/' and contain a 'raw/' subfolder inside it!
+    data_folder_mit: ../datasets/mitdb/
