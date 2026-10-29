@@ -24,7 +24,9 @@ use_final_layer_norm: false
 cls_normalization: null  # 'batch', 'layer', 'instance'
 patch_embedding: linear
 
-data_folder_sleep_apnea:  /data/groups/dlaskalab/sleep_apnea/physionet_apnea/
+data_folder_sleep_apnea:  ../datasets/apnea-ecg-database-1.0.0/
 
 window_size: 60 # 30 minutes in samples
 context_size: 240
+
+backend: vanilla

@@ -1,0 +1,4 @@
+mit_bih: configs/mit_bih_cls/xlstm_lp.yaml
+r_peaks: configs/mit_bih_r/xlstm_lp.yaml
+sleep_apnea: configs/sleep_apnea/xlstm_lp.yaml
+exercise: configs/exercise/xlstm_lp.yaml
