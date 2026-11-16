@@ -9,7 +9,7 @@ compile_model: false
 batch_size: 8
 lr_head: 0.01
 
-data_folder_high_intensity: ../datasets/ECG_high_intensity_exercise
+data_folder_high_intensity: /mnt/cephfs/home/bio/dbouchet/datasets/ECG_high_intensity_exercise
 r_peaks_detection: true
 plot_predictions: false
 max_length_signal: 2000

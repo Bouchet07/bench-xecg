@@ -1,0 +1,18 @@
+# training loop hyp
+wandb_log: false
+wandb_group: my_model_lp
+epochs: 1
+
+use_my_model: true
+linear_probing: true
+deterministic: false
+compile_model: false
+
+batch_size: 512
+num_workers: 16
+lr_head: 0.001
+wd: 0.1
+
+data_folder_mimic: /mnt/cephfs/home/bio/dbouchet/datasets/mimic-iv-ecg/
+
+use_cache: false

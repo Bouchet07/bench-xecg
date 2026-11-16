@@ -1,4 +1,4 @@
-wandb_log: true
+wandb_log: false
 wandb_group: best_xlstm_lp
 
 batch_size: 64
@@ -31,4 +31,4 @@ extend_labels: true
 
 data_folder_mit: ../datasets/mitdb/
 
-backend: vanilla
+#backend: vanilla

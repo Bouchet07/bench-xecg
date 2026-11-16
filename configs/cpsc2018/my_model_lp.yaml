@@ -1,0 +1,21 @@
+# training loop hyp
+wandb_log: false
+wandb_group: my_model_lp
+epochs: 1
+
+use_my_model: true
+linear_probing: true
+deterministic: false
+compile_model: false
+
+batch_size: 256
+num_workers: 16
+lr_head: 0.001
+wd: 0.1
+
+use_class_weights: false
+
+data_folder_cpsc2018: /mnt/cephfs/home/bio/dbouchet/datasets/cpsc_2018
+
+max_length_signal: 5000
+training_pct: 1.

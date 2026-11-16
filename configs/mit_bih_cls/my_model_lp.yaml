@@ -19,4 +19,4 @@ split_val_by_patient: true
 win_len: 1250
 
 # MUST end with a trailing slash '/' and contain a 'raw/' subfolder inside it!
-data_folder_mit: ../datasets/mitdb/
+data_folder_mit: /mnt/cephfs/home/bio/dbouchet/datasets/mitdb/

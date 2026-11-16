@@ -1,4 +1,5 @@
-wandb_log: true
+#wandb_log: true
+wandb_log: false
 wandb_group: best_xlstm_lp
 epochs: 30
 
@@ -28,4 +29,4 @@ plot_predictions: false
 
 max_length_signal: 2000
 
-backend: vanilla
+#backend: vanilla

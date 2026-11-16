@@ -1,4 +1,4 @@
-wandb_log: true
+wandb_log: false
 wandb_group: best_xlstm_lp
 
 batch_size: 64
@@ -35,5 +35,5 @@ win_len: 3600
 context_len: 0
 max_length_signal: 180556
 
-backend: vanilla
+#backend: vanilla
 
