@@ -1,4 +1,6 @@
+import gc
 import torch
+import torch._dynamo
 import yaml
 
 from bench_xecg.config import parse_config
@@ -20,6 +22,7 @@ parser.add_argument('--wandb_log', action='store_true', help='Whether to log to 
 
 if __name__ == '__main__':
     torch.set_float32_matmul_precision('medium')
+    torch._dynamo.config.cache_size_limit = 64
 
     args = parser.parse_args()
 
@@ -50,3 +53,7 @@ for task_key, default_cfg, train_fn, is_r_peaks in TASKS:
         task_config.r_peaks_detection = True
     for i in range(args.num_runs):
         train_fn(task_config, wandb=args.wandb_log)
+        torch._dynamo.reset()
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()

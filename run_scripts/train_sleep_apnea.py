@@ -57,6 +57,8 @@ def train(config, run=None, wandb=False):
 
     trainer = utils.get_trainer(config, 'train-sleep-apnea_bis', wandb=wandb, run=run)
     trainer.fit(model=model, train_dataloaders=train_dataloader, val_dataloaders=val_dataloader)
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
     trainer.test(model=model, dataloaders=test_dataloader, ckpt_path='best')
 
 # if main
