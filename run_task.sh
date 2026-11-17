@@ -2,6 +2,7 @@
 set -euo pipefail
 
 PACKED_SOURCE="${PACKED_SOURCE:-/mnt/cephfs/home/bio/dbouchet/datasets/packed_100hz}"
+RAW_SOURCE="${RAW_SOURCE:-/mnt/cephfs/home/bio/dbouchet/datasets}"
 MODEL=""
 TASK="all"
 STAGE_DATA=1
@@ -78,17 +79,21 @@ if [ ! -f "$CONFIG_FILE" ]; then
     exit 1
 fi
 
-# Determine which packed datasets to stage into /dev/shm for this task
+# Determine which packed and raw datasets to stage into /dev/shm for this task
 NEEDED_DATASETS=()
+NEEDED_RAW_DATASETS=()
 case "$TASK" in
     survival)            NEEDED_DATASETS=("code-15" "mimic-iv-ecg") ;;
     age)                 NEEDED_DATASETS=("code-15" "mimic-iv-ecg" "ptb-xl" "cpsc_2018") ;;
     lab)                 NEEDED_DATASETS=("mimic-iv-ecg") ;;
     ptb_xl)              NEEDED_DATASETS=("ptb-xl") ;;
     cpsc2018)            NEEDED_DATASETS=("cpsc_2018") ;;
-    all)                 NEEDED_DATASETS=("code-15" "mimic-iv-ecg" "ptb-xl" "cpsc_2018") ;;
-    apnea|exercise|mit_bih|ppg_af|r_peaks)
-                         NEEDED_DATASETS=() ;;
+    apnea)               NEEDED_RAW_DATASETS=("apnea-ecg-database-1.0.0") ;;
+    exercise)            NEEDED_RAW_DATASETS=("ECG_high_intensity_exercise") ;;
+    mit_bih|r_peaks)     NEEDED_RAW_DATASETS=("mitdb") ;;
+    ppg_af)              NEEDED_RAW_DATASETS=("deepbeat") ;;
+    all)                 NEEDED_DATASETS=("code-15" "mimic-iv-ecg" "ptb-xl" "cpsc_2018")
+                         NEEDED_RAW_DATASETS=("apnea-ecg-database-1.0.0" "ECG_high_intensity_exercise" "mitdb" "deepbeat") ;;
     *)                   NEEDED_DATASETS=("code-15" "mimic-iv-ecg" "ptb-xl" "cpsc_2018") ;;
 esac
 
@@ -101,9 +106,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
-if [ "$STAGE_DATA" -eq 1 ] && [ "${#NEEDED_DATASETS[@]}" -gt 0 ] && [ -d "$PACKED_SOURCE" ]; then
-    AVAILABLE_PACKED=()
-    REQUIRED_KB=0
+AVAILABLE_PACKED=()
+AVAILABLE_RAW=()
+REQUIRED_KB=0
+
+if [ "${#NEEDED_DATASETS[@]}" -gt 0 ] && [ -d "$PACKED_SOURCE" ]; then
     for ds in "${NEEDED_DATASETS[@]}"; do
         if [ -f "$PACKED_SOURCE/$ds/signals.bin" ] && [ -f "$PACKED_SOURCE/$ds/index.npz" ]; then
             AVAILABLE_PACKED+=("$ds")
@@ -111,24 +118,46 @@ if [ "$STAGE_DATA" -eq 1 ] && [ "${#NEEDED_DATASETS[@]}" -gt 0 ] && [ -d "$PACKE
             REQUIRED_KB=$((REQUIRED_KB + ds_kb))
         fi
     done
+fi
 
-    if [ "${#AVAILABLE_PACKED[@]}" -gt 0 ]; then
-        SHM_FREE_KB=$(df -Pk /dev/shm | awk 'NR==2 {print $4}')
-        # Require 2 GB headroom in /dev/shm
-        if [ "$SHM_FREE_KB" -gt $((REQUIRED_KB + 2097152)) ]; then
-            STAGE_DIR="/dev/shm/bench_packed_${USER:-user}_$$"
-            mkdir -p "$STAGE_DIR"
-            echo "=== Staging packed datasets (${AVAILABLE_PACKED[*]}) to $STAGE_DIR ==="
+if [ "${#NEEDED_RAW_DATASETS[@]}" -gt 0 ] && [ -d "$RAW_SOURCE" ]; then
+    for ds in "${NEEDED_RAW_DATASETS[@]}"; do
+        if [ -d "$RAW_SOURCE/$ds" ]; then
+            AVAILABLE_RAW+=("$ds")
+            ds_kb=$(du -skL "$RAW_SOURCE/$ds" | awk '{print $1}')
+            REQUIRED_KB=$((REQUIRED_KB + ds_kb))
+        fi
+    done
+fi
+
+if [ "$STAGE_DATA" -eq 1 ] && [ $(( ${#AVAILABLE_PACKED[@]} + ${#AVAILABLE_RAW[@]} )) -gt 0 ]; then
+    SHM_FREE_KB=$(df -Pk /dev/shm | awk 'NR==2 {print $4}')
+    # Require 2 GB headroom in /dev/shm
+    if [ "$SHM_FREE_KB" -gt $((REQUIRED_KB + 2097152)) ]; then
+        STAGE_DIR="/dev/shm/bench_data_${USER:-user}_$$"
+        if [ "${#AVAILABLE_PACKED[@]}" -gt 0 ]; then
+            mkdir -p "$STAGE_DIR/packed"
+            echo "=== Staging packed datasets (${AVAILABLE_PACKED[*]}) to $STAGE_DIR/packed ==="
             for ds in "${AVAILABLE_PACKED[@]}"; do
-                cp -r "$PACKED_SOURCE/$ds" "$STAGE_DIR/"
+                cp -r "$PACKED_SOURCE/$ds" "$STAGE_DIR/packed/"
             done
-            export BENCH_PACKED_DIR="$STAGE_DIR"
-        else
-            echo "=== /dev/shm free (${SHM_FREE_KB} KB) < required (${REQUIRED_KB} KB + 2 GB); reading packed data from CephFS ==="
+            export BENCH_PACKED_DIR="$STAGE_DIR/packed"
+        fi
+        if [ "${#AVAILABLE_RAW[@]}" -gt 0 ]; then
+            mkdir -p "$STAGE_DIR/raw"
+            echo "=== Staging raw datasets (${AVAILABLE_RAW[*]}) to $STAGE_DIR/raw ==="
+            for ds in "${AVAILABLE_RAW[@]}"; do
+                cp -rL "$RAW_SOURCE/$ds" "$STAGE_DIR/raw/"
+            done
+            export BENCH_RAW_DIR="$STAGE_DIR/raw"
+        fi
+    else
+        echo "=== /dev/shm free (${SHM_FREE_KB} KB) < required (${REQUIRED_KB} KB + 2 GB); reading from CephFS ==="
+        if [ "${#AVAILABLE_PACKED[@]}" -gt 0 ]; then
             export BENCH_PACKED_DIR="$PACKED_SOURCE"
         fi
     fi
-elif [ -d "$PACKED_SOURCE" ] && [ "${#NEEDED_DATASETS[@]}" -gt 0 ]; then
+elif [ "${#AVAILABLE_PACKED[@]}" -gt 0 ]; then
     export BENCH_PACKED_DIR="$PACKED_SOURCE"
 fi
 

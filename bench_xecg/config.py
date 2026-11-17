@@ -96,7 +96,20 @@ def parse_config(config_file, default_config_file):
     max_cpus = int(os.getenv("SLURM_CPUS_PER_TASK", merged_config.num_workers))
     merged_config.num_workers = min(merged_config.num_workers, max_cpus)
     print(f'Using {max_cpus} CPUs...')
-    
+
+    raw_root = os.environ.get("BENCH_RAW_DIR")
+    if raw_root:
+        raw_overrides = {
+            "data_folder_sleep_apnea": "apnea-ecg-database-1.0.0",
+            "data_folder_high_intensity": "ECG_high_intensity_exercise",
+            "data_folder_mit": "mitdb",
+            "data_folder_deepbeat": "deepbeat",
+        }
+        for key, subdir in raw_overrides.items():
+            cand = os.path.join(raw_root, subdir)
+            if os.path.isdir(cand):
+                merged_config[key] = cand
+
     return merged_config
 
 
