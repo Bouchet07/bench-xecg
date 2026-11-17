@@ -76,7 +76,7 @@ class ECGCODE15MortalityDataset(ECGCODE15Dataset):
         obj = super().__getitem__(idx)
         return {
             'signal': obj['global_signals'][0],
-            'death': torch.tensor(self.tab_data.loc[self.records[idx], 'death'], dtype=torch.bool),
+            'death': torch.tensor(bool(self.tab_data.loc[self.records[idx], 'death']), dtype=torch.bool),
             'timey': torch.tensor(self.tab_data.loc[self.records[idx], 'timey'], dtype=torch.float32)
         }
 

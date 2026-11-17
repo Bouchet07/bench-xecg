@@ -337,7 +337,7 @@ class ECGMIMICDataset(PretrainDataset):
         return {
             'signal': signal,
             'timey': torch.tensor(timey, dtype=torch.float32),
-            'death': torch.tensor(death, dtype=torch.bool),
+            'death': torch.tensor(bool(death), dtype=torch.bool),
         }
 
     def get_item_pretraining(self, idx):
