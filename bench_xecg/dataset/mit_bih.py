@@ -92,7 +92,7 @@ class ECGMITBIHDataset(torch.utils.data.Dataset):
             signal, _ = wfdb.rdsamp(os.path.join(self.data_folder, 'raw', f'{patient}'))
 
             header = wfdb.rdheader(os.path.join(self.data_folder, 'raw', f'{patient}'))
-            annotations = wfdb.rdann(os.path.join(self.data_folder + 'raw', f'{patient}'), 'atr')
+            annotations = wfdb.rdann(os.path.join(self.data_folder, 'raw', f'{patient}'), 'atr')
 
             age = int(header.comments[0].split(' ')[0].strip())
             gender = header.comments[1].split(' ')[0].strip()
