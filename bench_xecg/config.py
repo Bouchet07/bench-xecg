@@ -108,7 +108,7 @@ def parse_config(config_file, default_config_file):
         for key, subdir in raw_overrides.items():
             cand = os.path.join(raw_root, subdir)
             if os.path.isdir(cand):
-                merged_config[key] = cand
+                merged_config[key] = cand + os.sep
 
     return merged_config
 

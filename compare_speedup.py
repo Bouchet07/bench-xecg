@@ -38,7 +38,12 @@ TASKS = [
 ]
 
 
-def discover_latest_runs(runs_dir: Path, pipeline_tag: str) -> dict[str, Path]:
+def discover_latest_runs(
+    runs_dir: Path,
+    pipeline_tag: str,
+    require_substr: str | None = None,
+    exclude_substr: str | None = None,
+) -> dict[str, Path]:
     """Find the newest COMPLETED run directory in `runs_dir` for each task."""
     found: dict[str, Path] = {}
     if not runs_dir.exists():
@@ -47,7 +52,11 @@ def discover_latest_runs(runs_dir: Path, pipeline_tag: str) -> dict[str, Path]:
         candidates = sorted(
             (
                 p for p in runs_dir.iterdir()
-                if p.is_dir() and f"_{pipeline_tag}_" in p.name and p.name.endswith(f"_{task}")
+                if p.is_dir()
+                and f"_{pipeline_tag}_" in p.name
+                and p.name.endswith(f"_{task}")
+                and (require_substr is None or require_substr in p.name)
+                and (exclude_substr is None or exclude_substr not in p.name)
             ),
             key=lambda p: p.name,
             reverse=True,
@@ -194,22 +203,32 @@ def plot_comparison(rows: list[dict], output_png: Path, slow_tag: str, fast_tag:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Compare slow vs fast Hermes runtimes in runs/")
     parser.add_argument("--runs-dir", type=Path, default=Path("runs"), help="Path to runs directory (default: runs)")
-    parser.add_argument("--slow-tag", default="all_pipeline", help="Baseline pipeline tag (default: all_pipeline)")
+    parser.add_argument("--model", choices=["mine", "xlstm"], default="mine", help="Model preset (default: mine)")
+    parser.add_argument("--slow-tag", default=None, help="Override baseline pipeline tag")
     parser.add_argument("--fast-tag", default="run_task", help="Optimized pipeline tag (default: run_task)")
-    parser.add_argument("--out", type=Path, default=Path("speedup_comparison.png"), help="Output PNG path")
+    parser.add_argument("--out", type=Path, default=None, help="Output PNG path")
     args = parser.parse_args()
 
-    slow_runs = discover_latest_runs(args.runs_dir, args.slow_tag)
-    fast_runs = discover_latest_runs(args.runs_dir, args.fast_tag)
+    if args.model == "xlstm":
+        slow_tag = args.slow_tag or "xlstm_lp"
+        fast_req, fast_exc = "_xlstm_", None
+        out_png = args.out or Path("speedup_comparison_xlstm.png")
+    else:
+        slow_tag = args.slow_tag or "all_pipeline"
+        fast_req, fast_exc = None, "_xlstm_"
+        out_png = args.out or Path("speedup_comparison.png")
+
+    slow_runs = discover_latest_runs(args.runs_dir, slow_tag)
+    fast_runs = discover_latest_runs(args.runs_dir, args.fast_tag, require_substr=fast_req, exclude_substr=fast_exc)
 
     console = Console()
     table = Table(
-        title=f"Runtime Speedup: {args.slow_tag} vs {args.fast_tag}",
+        title=f"Runtime Speedup ({args.model}): {slow_tag} vs {args.fast_tag}",
         box=box.ROUNDED,
         header_style="bold cyan",
     )
     table.add_column("Task", style="bold")
-    table.add_column(f"Slow ({args.slow_tag})", justify="right")
+    table.add_column(f"Slow ({slow_tag})", justify="right")
     table.add_column(f"Fast ({args.fast_tag})", justify="right")
     table.add_column("Saved", justify="right")
     table.add_column("Speedup", justify="right")
@@ -259,14 +278,14 @@ def main() -> None:
         total_saved = total_slow - total_fast
         summary = (
             f"[bold]Matched tasks:[/bold] {len(matched_rows)}\n"
-            f"[bold]Total Slow ({args.slow_tag}):[/bold] {fmt(total_slow)}\n"
+            f"[bold]Total Slow ({slow_tag}):[/bold] {fmt(total_slow)}\n"
             f"[bold]Total Fast ({args.fast_tag}):[/bold] {fmt(total_fast)}\n"
             f"[bold]Total Time Saved:[/bold] [green]{fmt(total_saved)}[/green]\n"
             f"[bold]Overall Speedup:[/bold] [bold green]{overall_speedup:.2f}x[/bold green]"
         )
         console.print(Panel(summary, title="Summary", expand=False))
-        if plot_comparison(matched_rows, args.out, args.slow_tag, args.fast_tag):
-            console.print(f"Saved chart to [cyan]{args.out}[/cyan]")
+        if plot_comparison(matched_rows, out_png, slow_tag, args.fast_tag):
+            console.print(f"Saved chart to [cyan]{out_png}[/cyan]")
         else:
             console.print("[dim]matplotlib not installed; skipped PNG chart.[/dim]")
     else:
