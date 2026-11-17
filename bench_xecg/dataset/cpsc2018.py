@@ -28,6 +28,7 @@ class ECGCPSC2018Dataset(PretrainDataset):
         """
         super().__init__(config, split=split, global_augmentations=global_augmentations, local_augmentations=local_augmentations)
         self.data_folder = config.data_folder_cpsc2018
+        self.init_memmap('cpsc_2018')
 
         self.load_records()
         self.load_labels()  

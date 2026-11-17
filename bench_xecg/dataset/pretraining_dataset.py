@@ -31,6 +31,63 @@ class PretrainDataset(torch.utils.data.Dataset):
         self.max_length_signal = config.max_length_signal
         self.use_cache = config.use_cache
         self.cached_data = {}
+        self._memmap_index = None
+        self._memmap_bin_path = None
+        self._memmap_dtype = None
+        self._memmap_num_leads = None
+        self._mmap = None
+
+    def init_memmap(self, packed_subdir=None):
+        """Enable memmap reading if `signals.bin` and `index.npz` match this dataset config."""
+        if self.nk_clean:
+            return
+        candidates = []
+        packed_root = os.environ.get('BENCH_PACKED_DIR')
+        if packed_root and packed_subdir:
+            candidates.append(os.path.join(packed_root, packed_subdir))
+        if hasattr(self, 'data_folder') and self.data_folder:
+            candidates.append(str(self.data_folder))
+
+        for cand in candidates:
+            bin_path = os.path.join(cand, 'signals.bin')
+            idx_path = os.path.join(cand, 'index.npz')
+            if not (os.path.isfile(bin_path) and os.path.isfile(idx_path)):
+                continue
+            meta = np.load(idx_path, allow_pickle=False)
+            if int(meta['sampling_freq']) != self.sampling_freq:
+                continue
+            if [str(l).lower() for l in meta['leads']] != self.leads:
+                continue
+            self._memmap_bin_path = bin_path
+            self._memmap_dtype = np.dtype(str(meta['dtype']))
+            self._memmap_num_leads = int(meta['num_leads'])
+            self._memmap_index = {
+                str(r): (int(o), int(l))
+                for r, o, l in zip(meta['records'], meta['offsets'], meta['lengths'])
+            }
+            print(f"Using memmap cache at {cand} ({len(self._memmap_index)} records)")
+            return
+
+    def read_memmap(self, record):
+        """Return signal array from memmap if available, otherwise None."""
+        if self._memmap_index is None:
+            return None
+        key = str(record).replace('\\', '/')
+        entry = self._memmap_index.get(key)
+        if entry is None and hasattr(self, 'data_folder') and self.data_folder:
+            rel = os.path.relpath(str(record), str(self.data_folder)).replace('\\', '/')
+            entry = self._memmap_index.get(rel)
+            if entry is None:
+                folder_name = os.path.basename(os.path.normpath(str(self.data_folder)))
+                entry = self._memmap_index.get(f"{folder_name}/{rel}")
+        if entry is None:
+            return None
+        if self._mmap is None:
+            self._mmap = np.memmap(
+                self._memmap_bin_path, dtype=self._memmap_dtype, mode='r'
+            ).reshape(-1, self._memmap_num_leads)
+        offset, length = entry
+        return np.array(self._mmap[offset : offset + length], dtype=np.float32, copy=True)
 
     def load_cache_if_needed(self):
         if self.use_cache:
@@ -48,9 +105,11 @@ class PretrainDataset(torch.utils.data.Dataset):
         record = str(self.records[idx])
         age = self.ages[idx] if hasattr(self, 'ages') else None
         gender = self.genders[idx] if hasattr(self, 'genders') else None
-        s, info = wfdb.rdsamp(os.path.join(self.data_folder, record))
-        s = self.map_leads_and_clean(s, info)
-        s = self.resample_if_needed(s, info)
+        s = self.read_memmap(record)
+        if s is None:
+            s, info = wfdb.rdsamp(os.path.join(self.data_folder, record))
+            s = self.map_leads_and_clean(s, info)
+            s = self.resample_if_needed(s, info)
         return idx, (s, age, gender)
 
     def __len__(self):
@@ -65,11 +124,13 @@ class PretrainDataset(torch.utils.data.Dataset):
             age = self.ages[idx] if hasattr(self, 'ages') else None
             gender = self.genders[idx] if hasattr(self, 'genders') else None
 
-            s, info = wfdb.rdsamp(os.path.join(self.data_folder, record))
+            s = self.read_memmap(record)
+            if s is None:
+                s, info = wfdb.rdsamp(os.path.join(self.data_folder, record))
 
-            # mapping leads in the correct position
-            s = self.map_leads_and_clean(s, info)
-            s = self.resample_if_needed(s, info)
+                # mapping leads in the correct position
+                s = self.map_leads_and_clean(s, info)
+                s = self.resample_if_needed(s, info)
 
         if self.global_augmentations is not None:
             global_signals = [ self.global_augmentations(s).copy() for _ in range(self.n_global_view)]

@@ -12,6 +12,7 @@ class ECGPTBXLDataset(PretrainDataset):
         super().__init__(config, split=split, global_augmentations=global_augmentations, local_augmentations=local_augmentations)
         self.data_folder = config.data_folder_ptbxl
         self.labels_file = os.path.join(config.data_folder_ptbxl, '..', 'ptbxl_database.csv')
+        self.init_memmap('ptb-xl')
         self.task = config.task
         self.classes = config.classes if not None else ['STTC', 'NORM', 'MI', 'HYP', 'CD']
         self.load_tabular_data()

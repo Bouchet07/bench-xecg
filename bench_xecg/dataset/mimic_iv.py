@@ -21,6 +21,7 @@ class ECGMIMICDataset(PretrainDataset):
         self.labels_file = os.path.join(config.data_folder_mimic, 'records_w_diag_icd10.csv')
         self.downstream_task = downstream_task
         self.label_list = config.label_list
+        self.init_memmap('mimic-iv-ecg')
 
         self.load_tabular_data()
         self.load_records(split)
@@ -279,13 +280,15 @@ class ECGMIMICDataset(PretrainDataset):
         
     def get_signal(self, idx):
         record = self.tab_data.iloc[idx]['file_name']
-        signal, info = wfdb.rdsamp(os.path.join(self.data_folder, record))
+        signal = self.read_memmap(record)
+        if signal is None:
+            signal, info = wfdb.rdsamp(os.path.join(self.data_folder, record))
 
-        # remove nans
-        signal = np.nan_to_num(signal)
+            # remove nans
+            signal = np.nan_to_num(signal)
 
-        signal = self.map_leads_and_clean(signal, info)
-        signal = self.resample_if_needed(signal, info)
+            signal = self.map_leads_and_clean(signal, info)
+            signal = self.resample_if_needed(signal, info)
 
         if self.global_augmentations is not None:
             signal = self.global_augmentations(signal)
@@ -350,15 +353,13 @@ class ECGMIMICDataset(PretrainDataset):
             records = np.random.choice(records, num_views)
 
         unique_records = set([record for record in records])
-        unique_signals = { record: wfdb.rdsamp(os.path.join(self.data_folder, record)) for record in unique_records }
-        signals = [ unique_signals[record] for record in records ]
-
-        # mapping leads in the correct position
         new_signals = []
-        for signal in signals:
-            s, info = signal
-            s = self.map_leads_and_clean(s, info)
-            s = self.resample_if_needed(s, info)
+        for record in records:
+            s = self.read_memmap(record)
+            if s is None:
+                s, info = wfdb.rdsamp(os.path.join(self.data_folder, record))
+                s = self.map_leads_and_clean(s, info)
+                s = self.resample_if_needed(s, info)
             new_signals.append(s)
         signals = new_signals
     
