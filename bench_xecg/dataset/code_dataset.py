@@ -20,6 +20,7 @@ class ECGCODE15Dataset(PretrainDataset):
         super().__init__(config, global_augmentations=global_augmentations, local_augmentations=local_augmentations)
         self.data_folder = Path(config.data_folder_code15)
         self.labels_file = Path(config.labels_file_code15)
+        self.init_memmap('code-15')
         self.load_tabular_data()
         self.load_records()
         self.load_age_gender()
@@ -35,7 +36,10 @@ class ECGCODE15Dataset(PretrainDataset):
         # set exam_id as index
         print("tabular data fields for CODE 15: ", self.tab_data.head())
 
-        self.tab_data['valid'] = self.tab_data.parallel_apply(lambda row: (self.data_folder / f"{row['exam_id']}.hea").exists(), axis=1)
+        if self._memmap_index is not None:
+            self.tab_data['valid'] = self.tab_data['exam_id'].astype(str).isin(self._memmap_index)
+        else:
+            self.tab_data['valid'] = self.tab_data.parallel_apply(lambda row: (self.data_folder / f"{row['exam_id']}.hea").exists(), axis=1)
         self.tab_data = self.tab_data[self.tab_data['valid']]
 
         self.tab_data.set_index('exam_id', inplace=True)
@@ -76,7 +80,7 @@ class ECGCODE15MortalityDataset(ECGCODE15Dataset):
         obj = super().__getitem__(idx)
         return {
             'signal': obj['global_signals'][0],
-            'death': torch.tensor(self.tab_data.loc[self.records[idx], 'death'], dtype=torch.bool),
+            'death': torch.tensor(bool(self.tab_data.loc[self.records[idx], 'death']), dtype=torch.bool),
             'timey': torch.tensor(self.tab_data.loc[self.records[idx], 'timey'], dtype=torch.float32)
         }
 
