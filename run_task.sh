@@ -2,7 +2,11 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+# Only cd to SCRIPT_DIR when invoked from outside a bench-xecg working directory
+# (keeps CWD intact under snapshot launchers like `send` so checkpoints/logs_lightning resolve).
+if [ ! -d "configs" ] && [ -d "$SCRIPT_DIR/configs" ]; then
+    cd "$SCRIPT_DIR"
+fi
 
 RAW_SOURCE="${RAW_SOURCE:-${BENCH_DATA_ROOT:-$HOME/datasets}}"
 PACKED_SOURCE="${PACKED_SOURCE:-$RAW_SOURCE/packed_100hz}"
@@ -285,11 +289,11 @@ fi
 if [ "$WANDB_LOG" -eq 1 ]; then
     TRAIN_ARGS+=(--wandb_log)
 fi
-python train_all.py "${TRAIN_ARGS[@]}"
+python "$SCRIPT_DIR/train_all.py" "${TRAIN_ARGS[@]}"
 
 if [ "$SKIP_SCORE" -eq 0 ] && [ -n "$EXPERIMENT_NAME" ]; then
     echo "=== [2/2] Running Benchmark Evaluation ($EXPERIMENT_NAME) ==="
-    python benchscore.py logs_lightning "$EXPERIMENT_NAME"
+    python "$SCRIPT_DIR/benchscore.py" logs_lightning "$EXPERIMENT_NAME"
 elif [ "$SKIP_SCORE" -eq 0 ]; then
     echo "=== [2/2] Skipping benchscore.py (could not infer experiment name; pass --exp <name>) ==="
 fi
