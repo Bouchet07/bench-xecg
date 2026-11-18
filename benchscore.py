@@ -182,7 +182,7 @@ def main(
             status_msg = f"WARN: used {valid_count}/{total_found}{skip_note}"
             color = typer.colors.YELLOW
         elif total_found > max_versions:
-            status_msg = f"NOTE: {total_found} found, used top {max_versions}"
+            status_msg = f"NOTE: {total_found} found, used latest {max_versions}"
             color = typer.colors.YELLOW
         else:
             status_msg = f"OK: {valid_count}/{max_versions}"
