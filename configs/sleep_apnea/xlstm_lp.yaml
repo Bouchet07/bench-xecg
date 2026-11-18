@@ -1,8 +1,7 @@
 wandb_log: false
 wandb_group: best_xlstm_lp
 
-# batch_size: 128
-batch_size: 3
+batch_size: 128
 
 epochs: 20
 
