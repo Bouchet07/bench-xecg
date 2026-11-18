@@ -1,7 +1,8 @@
 wandb_log: false
 wandb_group: best_xlstm_lp
 
-batch_size: 64
+# batch_size: 64
+batch_size: 256
 
 lr_head: 0.001
 lr_core: 0.00001

@@ -19,7 +19,9 @@ checkpoint: pretrain-xLSTM/0rgc8fun/checkpoints/epoch=49-step=504700.ckpt
 use_final_layer_norm: false
 cls_normalization: null  # 'batch', 'layer', 'instance'
 
-data_folder_mimic: /data/groups/dlaskalab/mimic-iv-ecg/raw/
+# Train dataset (CODE-15)
+data_folder_code15: /mnt/cephfs/home/bio/dbouchet/datasets/code-15/processed/
+labels_file_code15: /mnt/cephfs/home/bio/dbouchet/datasets/code-15/exams_filtered.csv
 
-data_folder_code15: /data/groups/dlaskalab/CODE15/processed/
-labels_file_code15: /data/groups/dlaskalab/CODE15/processed/exams_filtered.csv
+# Test dataset (MIMIC-IV)
+data_folder_mimic: /mnt/cephfs/home/bio/dbouchet/datasets/mimic-iv-ecg/
